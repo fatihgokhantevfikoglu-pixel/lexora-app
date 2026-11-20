@@ -32,20 +32,17 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KOTLİN SÜRÜMÜNÜ KESİN OLARAK 2.0.0 YAPAN GÜÇLÜ KOMUT
+    # KOTLİN SÜRÜMÜNÜ KESİN OLARAK 2.0.10 YAP
     - name: Kotlin sürümünü güncelle
       run: |
-        # settings.gradle varsa güncelle
         if [ -f android/settings.gradle ]; then
-          sed -i -E 's/id "org.jetbrains.kotlin.android" version "[^"]+"/id "org.jetbrains.kotlin.android" version "2.0.0"/' android/settings.gradle
+          sed -i -E 's/id "org.jetbrains.kotlin.android" version "[^"]+"/id "org.jetbrains.kotlin.android" version "2.0.10"/' android/settings.gradle
         fi
-        # settings.gradle.kts varsa güncelle
         if [ -f android/settings.gradle.kts ]; then
-          sed -i -E 's/id\("org.jetbrains.kotlin.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.0.0"/' android/settings.gradle.kts
+          sed -i -E 's/id\("org.jetbrains.kotlin.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.0.10"/' android/settings.gradle.kts
         fi
-        # build.gradle varsa güncelle (eski şablonlar için)
         if [ -f android/build.gradle ]; then
-          sed -i -E "s/ext.kotlin_version = '[^']+'/ext.kotlin_version = '2.0.0'/" android/build.gradle
+          sed -i -E "s/ext.kotlin_version = '[^']+'/ext.kotlin_version = '2.0.10'/" android/build.gradle
         fi
 
     - name: local.properties oluştur
@@ -60,7 +57,6 @@ jobs:
     - name: APK derle
       run: flutter build apk --release
 
-    # APK'nın nereye kaydedildiğini kontrol et (garantiye alalım)
     - name: APK konumunu doğrula
       run: |
         echo "Derleme tamamlandı. Dosya aranıyor..."
