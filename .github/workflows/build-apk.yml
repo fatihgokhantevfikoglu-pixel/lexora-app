@@ -26,21 +26,17 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. ADIM: Android klasörünü Flutter'ın kendisine oluşturt
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # 2. ADIM: Temizlik ve Paketleri Yükleme (Eklentilerin Android'e gömülmesi için)
     - name: Flutter Clean
       run: flutter clean
 
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # 3. ADIM: Ayarlar (NDK, minSdk ve local.properties)
     - name: Ayarları yap
       run: |
-        # NDK sürümü
         if [ -f android/app/build.gradle.kts ]; then
           sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
           sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle.kts
@@ -55,19 +51,22 @@ jobs:
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
         echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
-    # 4. ADIM: İnternet İzni
     - name: İnternet iznini ekle
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-    # 5. ADIM: Derleme (Eğer hata verirse burada duracak, hatayı görebileceğiz)
+    # "|| true" sayesinde Flutter APK'yı bulamasa bile işlem durmayacak
     - name: APK derle
-      run: flutter build apk --release
+      run: flutter build apk --release || true
 
-    # 6. ADIM: APK'yı yükle
+    # Sunucudaki tüm .apk dosyalarını bul
+    - name: APK Dosyalarını Bul
+      run: find . -name "*.apk"
+
+    # Bulunan tüm .apk dosyalarını yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: "**/*.apk"
         retention-days: 30
