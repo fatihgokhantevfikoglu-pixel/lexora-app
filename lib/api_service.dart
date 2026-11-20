@@ -8,7 +8,7 @@ class ApiService {
 
   Future<Map<String, dynamic>?> fetchWordDetails(String word) async {
     try {
-      final res = await http.get(Uri.parse('$_dictBase/$word'));
+      final res = await http.get(Uri.parse('$_dictBase/$word')).timeout(const Duration(seconds: 5));
       if (res.statusCode != 200) return null;
       final List data = jsonDecode(res.body);
       if (data.isEmpty) return null;
@@ -22,17 +22,10 @@ class ApiService {
       if (meanings != null && meanings.isNotEmpty) {
         pos = meanings[0]['partOfSpeech'] ?? 'n.';
         final defs = meanings[0]['definitions'] as List?;
-        if (defs != null && defs.isNotEmpty) {
-          definition = defs[0]['definition'] ?? '';
-        }
+        if (defs != null && defs.isNotEmpty) definition = defs[0]['definition'] ?? '';
       }
 
-      return {
-        'word': word,
-        'pos': _abbreviatePos(pos),
-        'definition': definition,
-        'origin': origin,
-      };
+      return {'word': word, 'pos': _abbreviatePos(pos), 'definition': definition, 'origin': origin};
     } catch (e) {
       return null;
     }
@@ -40,15 +33,10 @@ class ApiService {
 
   Future<List<String>> fetchRelatedWords(String seed, {int limit = 10}) async {
     try {
-      final res = await http
-          .get(Uri.parse('$_datamuseBase/words?ml=$seed&max=$limit&md=d'));
+      final res = await http.get(Uri.parse('$_datamuseBase/words?ml=$seed&max=$limit&md=d')).timeout(const Duration(seconds: 5));
       if (res.statusCode != 200) return [];
       final List data = jsonDecode(res.body);
-      return data
-          .map((e) => e['word'] as String?)
-          .whereType<String>()
-          .where((w) => w.length > 2 && !w.contains(' '))
-          .toList();
+      return data.map((e) => e['word'] as String?).whereType<String>().where((w) => w.length > 2 && !w.contains(' ')).toList();
     } catch (e) {
       return [];
     }
@@ -59,10 +47,8 @@ class ApiService {
     for (final raw in rawWords) {
       final details = await fetchWordDetails(raw);
       if (details == null) continue;
-
       final origin = details['origin'] as String? ?? '';
       final rootInfo = _extractRootFromOrigin(origin);
-
       newWords.add(Word(
         english: raw,
         turkish: '(çeviri bekleniyor)',
@@ -79,34 +65,16 @@ class ApiService {
   Map<String, String> _extractRootFromOrigin(String origin) {
     final lower = origin.toLowerCase();
     final rootPatterns = {
-      'fer': 'taşımak',
-      'port': 'taşımak',
-      'spect': 'bakmak',
-      'dict': 'söylemek',
-      'scrib': 'yazmak',
-      'script': 'yazmak',
-      'vis': 'görmek',
-      'vid': 'görmek',
-      'aud': 'duymak',
-      'man': 'el',
-      'mit': 'göndermek',
-      'miss': 'göndermek',
-      'duc': 'yönetmek',
-      'duct': 'yönetmek',
-      'tract': 'çekmek',
-      'pos': 'koymak',
-      'pon': 'koymak',
+      'fer': 'taşımak', 'port': 'taşımak', 'spect': 'bakmak', 'dict': 'söylemek',
+      'scrib': 'yazmak', 'script': 'yazmak', 'vis': 'görmek', 'vid': 'görmek',
+      'aud': 'duymak', 'man': 'el', 'mit': 'göndermek', 'miss': 'göndermek',
+      'duc': 'yönetmek', 'duct': 'yönetmek', 'tract': 'çekmek', 'pos': 'koymak', 'pon': 'koymak',
     };
     for (final entry in rootPatterns.entries) {
-      if (lower.contains(entry.key)) {
-        return {'root': entry.key, 'meaning': entry.value};
-      }
+      if (lower.contains(entry.key)) return {'root': entry.key, 'meaning': entry.value};
     }
     final match = RegExp(r'from\s+(\w+)').firstMatch(lower);
-    return {
-      'root': match?.group(1) ?? 'unknown',
-      'meaning': 'bilinmiyor',
-    };
+    return {'root': match?.group(1) ?? 'unknown', 'meaning': 'bilinmiyor'};
   }
 
   String _abbreviatePos(String pos) {
