@@ -26,59 +26,28 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. Android projesini oluştur
-    - name: Android projesini oluştur
-      run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
-
-    # 2. Temizlik ve Paketleri Yükleme (Eklentilerin kaydedilmesi için kritik)
-    - name: Flutter Clean
-      run: flutter clean
-
+    # 1. Bağımlılıkları yükle
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # 3. NDK ve local.properties ayarları
-    - name: NDK sürümünü güncelle
-      run: |
-        if [ -f android/app/build.gradle.kts ]; then
-          sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
-        fi
-        if [ -f android/app/build.gradle ]; then
-          sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
-        fi
+    # 2. Android projesini sıfırdan oluştur (Eklentileri kendi kaydeder)
+    - name: Android projesini oluştur
+      run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
+    # 3. local.properties
     - name: local.properties oluştur
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
         echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
-    - name: İnternet iznini ekle
-      run: |
-        sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
-
-    # 4. Release modunda küçültmeyi kapat (Eklentilerin silinmesini engeller)
-    - name: R8/ProGuard'ı devre dışı bırak
-      run: |
-        if [ -f android/app/build.gradle.kts ]; then
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
-        fi
-        if [ -f android/app/build.gradle ]; then
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
-        fi
-
-    # 5. APK Derle
+    # 4. APK derle (Hata gizleyici || true KALDIRILDI)
     - name: APK derle
-      run: flutter build apk --release || true
+      run: flutter build apk --release
 
-    # 6. APK'yı Bul ve Yükle
-    - name: APK Dosyalarını Bul
-      run: find . -name "*.apk"
-
+    # 5. APK'yı yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: "**/*.apk"
+        path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
