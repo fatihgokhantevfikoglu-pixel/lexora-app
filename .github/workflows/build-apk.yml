@@ -29,11 +29,15 @@ jobs:
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # KRİTİK DÜZELTME: --project-name lexora_app eklendi (tire yasak!)
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # İnternet iznini Manifest'e ekle
+    # KRİTİK EKLEME: local.properties dosyasını elle oluştur
+    - name: local.properties oluştur
+      run: |
+        echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+        echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
+
     - name: İnternet iznini ekle
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
