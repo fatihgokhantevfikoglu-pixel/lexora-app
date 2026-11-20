@@ -9,7 +9,10 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseHelper.instance.init();
+  // Veritabanını arka planda başlat, uygulamanın açılmasını engelleme
+  DatabaseHelper.instance.init().catchError((e) {
+    debugPrint("Veritabanı başlatma hatası: $e");
+  });
   runApp(const LexoraApp());
 }
 
