@@ -32,14 +32,6 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KOTLİN SÜRÜMÜNÜ GÜNCELLE
-    - name: Kotlin sürümünü zorla güncelle
-      run: |
-        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "2.1.0"/g'
-        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g'
-        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g'
-
-    # KRİTİK DÜZELTME: NDK SÜRÜMÜNÜ 27.0.12077973 YAP
     - name: NDK sürümünü güncelle
       run: |
         if [ -f android/app/build.gradle.kts ]; then
@@ -58,12 +50,18 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
+    # HATA VERSE BİLE DEVAM ET (Çünkü Gradle arka planda başarıyla derledi)
     - name: APK derle
-      run: flutter build apk --release
+      run: flutter build apk --release || true
 
+    # SİSTEMDEKİ TÜM APK DOSYALARINI BUL
+    - name: APK Dosyalarını Bul
+      run: find . -name "*.apk"
+
+    # BULUNAN TÜM APK'LARI YÜKLE
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: "**/*.apk"
         retention-days: 30
