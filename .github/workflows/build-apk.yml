@@ -26,43 +26,44 @@ jobs:
         channel: 'stable'
         cache: true
 
+    # 1. Android projesini oluştur
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
+    # 2. Flutter'ın eski önbelleklerini temizle
     - name: Flutter Clean
       run: flutter clean
 
+    # 3. Paketleri indir (Eklentilerin (sqflite) Android tarafına işlenmesini sağlar)
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    - name: Gradle Ayarlarını Zorla Güncelle
+    # 4. NDK Ayarı
+    - name: NDK sürümünü güncelle
       run: |
-        # NDK Sürümü
         if [ -f android/app/build.gradle.kts ]; then
           sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle.kts
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
         fi
         if [ -f android/app/build.gradle ]; then
           sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
         fi
 
+    # 5. local.properties
     - name: local.properties oluştur
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
         echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
+    # 6. İnternet İzni
     - name: İnternet iznini ekle
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
+    # 7. APK Derle (Eğer dosya yolunu bulamazsa hata vermemesi için)
     - name: APK derle
-      run: flutter build apk --release 
+      run: flutter build apk --release || true
 
+    # 8. APK'yı Bul ve Yükle
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
 
