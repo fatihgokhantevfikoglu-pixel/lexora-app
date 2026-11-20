@@ -34,50 +34,58 @@ class _MatchScreenState extends State<MatchScreen> {
         .addPostFrameCallback((_) => _loadBatch(reset: true));
   }
 
-  Future<void> _loadBatch({bool reset = false}) async {
-    if (reset) {
-      _sessionCorrect = 0;
-      _sessionWrong = 0;
-    }
-    final size = context.read<AppState>().batchSize;
-    var all = await _db.getActiveWords();
-
-    if (all.length < size) {
-      setState(() => _loading = true);
-      final added = await _db.fetchAndStoreNewWords(count: size * 2);
-      if (added > 0) {
-        all = await _db.getActiveWords();
+    Future<void> _loadBatch({bool reset = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      if (reset) {
+        _sessionCorrect = 0;
+        _sessionWrong = 0;
       }
+    });
+
+    try {
+      final size = context.read<AppState>().batchSize;
+      var all = await _db.getActiveWords();
+
+      if (all.length < size) {
+        final added = await _db.fetchAndStoreNewWords(count: size * 2);
+        if (added > 0) {
+          all = await _db.getActiveWords();
+        }
+      }
+
+      final now = DateTime.now();
+      all.sort((a, b) {
+        final aDue = a.nextReview == null || !a.nextReview!.isAfter(now);
+        final bDue = b.nextReview == null || !b.nextReview!.isAfter(now);
+        if (aDue != bDue) return aDue ? -1 : 1;
+        if (a.wrongCount != b.wrongCount) return b.wrongCount.compareTo(a.wrongCount);
+        if (a.consecutiveCorrect != b.consecutiveCorrect) {
+          return a.consecutiveCorrect.compareTo(b.consecutiveCorrect);
+        }
+        return a.id!.compareTo(b.id!);
+      });
+
+      final batch = all.take(size).toList();
+      if (!mounted) return;
+      setState(() {
+        _session = batch;
+        _left = List.from(batch)..shuffle();
+        _right = List.from(batch)..shuffle();
+        _selectedLeft = null;
+        _selectedRight = null;
+        _matchResult = null;
+        _showHint = false;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint("Eşleştirme yüklenirken hata: $e");
       if (!mounted) return;
       setState(() => _loading = false);
     }
-
-    final now = DateTime.now();
-    all.sort((a, b) {
-      final aDue = a.nextReview == null || !a.nextReview!.isAfter(now);
-      final bDue = b.nextReview == null || !b.nextReview!.isAfter(now);
-      if (aDue != bDue) return aDue ? -1 : 1;
-      if (a.wrongCount != b.wrongCount) return b.wrongCount.compareTo(a.wrongCount);
-      if (a.consecutiveCorrect != b.consecutiveCorrect) {
-        return a.consecutiveCorrect.compareTo(b.consecutiveCorrect);
-      }
-      return a.id!.compareTo(b.id!);
-    });
-
-    final batch = all.take(size).toList();
-    if (!mounted) return;
-    setState(() {
-      _session = batch;
-      _left = List.from(batch)..shuffle();
-      _right = List.from(batch)..shuffle();
-      _selectedLeft = null;
-      _selectedRight = null;
-      _matchResult = null;
-      _showHint = false;
-      _loading = false;
-    });
   }
-
+  
   void _onLeftTap(Word w) {
     if (_busy || _matchResult == true) return;
     setState(() {
