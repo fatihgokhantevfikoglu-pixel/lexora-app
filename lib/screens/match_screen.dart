@@ -34,7 +34,7 @@ class _MatchScreenState extends State<MatchScreen> {
         .addPostFrameCallback((_) => _loadBatch(reset: true));
   }
 
-    Future<void> _loadBatch({bool reset = false}) async {
+  Future<void> _loadBatch({bool reset = false}) async {
     if (!mounted) return;
     setState(() {
       _loading = true;
