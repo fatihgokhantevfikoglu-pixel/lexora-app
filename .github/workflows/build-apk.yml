@@ -26,11 +26,14 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. ÖNCE ANDROID PROJESİNİ OLUŞTUR
+    # 1. Android projesini oluştur
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # 2. SONRA PAKETLERİ YÜKLE (Böylece sqflite Android'e kaydolur)
+    # 2. EKLENTİLERİN ANDROID'E KAYDOLMASI İÇİN ÖNCE TEMİZLE, SONRA PUB GET YAP
+    - name: Flutter Clean
+      run: flutter clean
+
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
