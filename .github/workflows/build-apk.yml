@@ -22,7 +22,8 @@ jobs:
     - name: Flutter kur
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0'
+        # EN GÜNCEL STABİL FLUTTER SÜRÜMÜ
+        flutter-version: '3.29.0' 
         channel: 'stable'
         cache: true
 
@@ -32,18 +33,12 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KOTLİN SÜRÜMÜNÜ KESİN OLARAK 2.0.10 YAP
-    - name: Kotlin sürümünü güncelle
+    # GARANTİLİ KOTLİN GÜNCELLEMESİ (Her ihtimale karşı tüm gradle dosyalarını tarar)
+    - name: Kotlin sürümünü zorla güncelle
       run: |
-        if [ -f android/settings.gradle ]; then
-          sed -i -E 's/id "org.jetbrains.kotlin.android" version "[^"]+"/id "org.jetbrains.kotlin.android" version "2.0.10"/' android/settings.gradle
-        fi
-        if [ -f android/settings.gradle.kts ]; then
-          sed -i -E 's/id\("org.jetbrains.kotlin.android"\) version "[^"]+"/id("org.jetbrains.kotlin.android") version "2.0.10"/' android/settings.gradle.kts
-        fi
-        if [ -f android/build.gradle ]; then
-          sed -i -E "s/ext.kotlin_version = '[^']+'/ext.kotlin_version = '2.0.10'/" android/build.gradle
-        fi
+        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "2.1.0"/g'
+        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g'
+        find android -name "*.gradle" -o -name "*.gradle.kts" | xargs sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g'
 
     - name: local.properties oluştur
       run: |
@@ -56,11 +51,6 @@ jobs:
 
     - name: APK derle
       run: flutter build apk --release
-
-    - name: APK konumunu doğrula
-      run: |
-        echo "Derleme tamamlandı. Dosya aranıyor..."
-        find build/app/outputs/flutter-apk/ -name "*.apk"
 
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
