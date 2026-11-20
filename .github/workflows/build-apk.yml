@@ -29,11 +29,11 @@ jobs:
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # ANDROID KLASÖRÜNÜ SIFIRDAN VE EKSİKSİZ OLUŞTUR
+    # KRİTİK DÜZELTME: --project-name lexora_app eklendi (tire yasak!)
     - name: Android projesini oluştur
-      run: flutter create --platforms=android --org com.lexora .
+      run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # İNTERNET İZNİNİ EKLE (Uygulama internete bağlanacaksa şart)
+    # İnternet iznini Manifest'e ekle
     - name: İnternet iznini ekle
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
