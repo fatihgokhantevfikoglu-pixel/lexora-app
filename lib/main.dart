@@ -9,19 +9,41 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Veritabanı çok hızlı oluşacak, o yüzden tamamlanmasını bekleyebiliriz
+  String? dbError;
   try {
+    // Veritabanını başlat (Hata olursa ekranda göstermek için yakalıyoruz)
     await DatabaseHelper.instance.init();
   } catch (e) {
-    debugPrint("Veritabanı hatası: $e");
+    dbError = e.toString();
   }
-  runApp(const LexoraApp());
+  runApp(LexoraApp(dbError: dbError));
 }
+
 class LexoraApp extends StatelessWidget {
-  const LexoraApp({super.key});
+  final String? dbError;
+  const LexoraApp({super.key, this.dbError});
 
   @override
   Widget build(BuildContext context) {
+    // EĞER VERİTABANI HATA VERİRSE EKRANDA GÖSTER
+    if (dbError != null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'Veritabanı Hatası:\n\n$dbError',
+                style: const TextStyle(color: Colors.red, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return ChangeNotifierProvider(
       create: (_) => AppState()..load(),
       child: Consumer<AppState>(
@@ -59,22 +81,10 @@ class _RootShellState extends State<RootShell> {
         selectedIndex: _i,
         onDestinationSelected: (v) => setState(() => _i = v),
         destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.gamepad_outlined),
-              selectedIcon: Icon(Icons.gamepad),
-              label: 'Eşleştir'),
-          NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics),
-              label: 'İstatistik'),
-          NavigationDestination(
-              icon: Icon(Icons.bubble_chart_outlined),
-              selectedIcon: Icon(Icons.bubble_chart),
-              label: 'Evren'),
-          NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Ayarlar'),
+          NavigationDestination(icon: Icon(Icons.gamepad_outlined), selectedIcon: Icon(Icons.gamepad), label: 'Eşleştir'),
+          NavigationDestination(icon: Icon(Icons.analytics_outlined), selectedIcon: Icon(Icons.analytics), label: 'İstatistik'),
+          NavigationDestination(icon: Icon(Icons.bubble_chart_outlined), selectedIcon: Icon(Icons.bubble_chart), label: 'Evren'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Ayarlar'),
         ],
       ),
     );
