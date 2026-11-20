@@ -22,53 +22,63 @@ class DatabaseHelper {
     await db;
   }
 
-  Future<Database> _open() async {
+    Future<Database> _open() async {
     final path = join(await getDatabasesPath(), 'lexora.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2, // SÜRÜMÜ 2 YAPTIK: Eski veritabanı silinecek
       onCreate: (db, v) async {
-        await db.execute('''
-          CREATE TABLE words (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            english TEXT UNIQUE NOT NULL,
-            turkish TEXT NOT NULL,
-            pos TEXT NOT NULL,
-            root TEXT NOT NULL,
-            root_meaning TEXT NOT NULL,
-            morphology TEXT NOT NULL,
-            family TEXT NOT NULL,
-            correct_count INTEGER DEFAULT 0,
-            wrong_count INTEGER DEFAULT 0,
-            consecutive_correct INTEGER DEFAULT 0,
-            is_mastered INTEGER DEFAULT 0,
-            last_reviewed TEXT,
-            next_review TEXT,
-            ease_factor REAL DEFAULT 2.5,
-            interval_days INTEGER DEFAULT 0,
-            repetitions INTEGER DEFAULT 0,
-            times_shown INTEGER DEFAULT 0
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE review_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word_id INTEGER NOT NULL,
-            was_correct INTEGER NOT NULL,
-            quality INTEGER NOT NULL,
-            response_time_ms INTEGER NOT NULL,
-            reviewed_at TEXT NOT NULL
-          )
-        ''');
-               final batch = db.batch();
-        for (final w in seedWords) {
-          batch.insert('words', w.toMap());
-        }
-        await batch.commit(noResult: true);
+        await _createTables(db);
+      },
+      onUpgrade: (db, oldV, newV) async {
+        // Eski bozuk tabloları sil ve yeniden oluştur
+        await db.execute('DROP TABLE IF EXISTS words');
+        await db.execute('DROP TABLE IF EXISTS review_log');
+        await _createTables(db);
       },
     );
   }
 
+  Future<void> _createTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        english TEXT UNIQUE NOT NULL,
+        turkish TEXT NOT NULL,
+        pos TEXT NOT NULL,
+        root TEXT NOT NULL,
+        root_meaning TEXT NOT NULL,
+        morphology TEXT NOT NULL,
+        family TEXT NOT NULL,
+        correct_count INTEGER DEFAULT 0,
+        wrong_count INTEGER DEFAULT 0,
+        consecutive_correct INTEGER DEFAULT 0,
+        is_mastered INTEGER DEFAULT 0,
+        last_reviewed TEXT,
+        next_review TEXT,
+        ease_factor REAL DEFAULT 2.5,
+        interval_days INTEGER DEFAULT 0,
+        repetitions INTEGER DEFAULT 0,
+        times_shown INTEGER DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE review_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word_id INTEGER NOT NULL,
+        was_correct INTEGER NOT NULL,
+        quality INTEGER NOT NULL,
+        response_time_ms INTEGER NOT NULL,
+        reviewed_at TEXT NOT NULL
+      )
+    ''');
+    final batch = db.batch();
+    for (final w in seedWords) {
+      batch.insert('words', w.toMap());
+    }
+    await batch.commit(noResult: true);
+  }
+  
   Future<List<Word>> getActiveWords() async {
     final d = await db;
     final rows = await d.query('words', where: 'is_mastered = 0');
