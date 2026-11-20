@@ -32,7 +32,20 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KRİTİK DÜZELTME: NDK SÜRÜMÜNÜ ZORLA 27 YAP
+    # KRİTİK EKLEME: Eklentilerin Android'e kaydedilmesini zorla!
+    - name: Eklentileri zorla kaydet
+      run: |
+        echo "Eklentileri Android tarafına kaydediyorum..."
+        # Flutter'ın eklentileri kendi oluşturduğu dosyaya yazmasını sağla
+        flutter pub get
+        flutter build apk --debug || true
+        # Ana derleme öncesi eklenti kayıt dosyasını kontrol et
+        if [ -f "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" ]; then
+          echo "Eklenti kaydı bulundu!"
+        else
+          echo "Eklenti kaydı BULUNAMADI! (Bu dosya Flutter tarafından derleme anında oluşturulur)"
+        fi
+
     - name: NDK sürümünü güncelle
       run: |
         if [ -f android/app/build.gradle.kts ]; then
@@ -40,18 +53,6 @@ jobs:
         fi
         if [ -f android/app/build.gradle ]; then
           sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
-        fi
-
-    # Release modunda küçültmeyi kapat (Eklentilerin silinmesini engeller)
-    - name: R8/ProGuard'ı devre dışı bırak
-      run: |
-        if [ -f android/app/build.gradle.kts ]; then
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
-        fi
-        if [ -f android/app/build.gradle ]; then
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
         fi
 
     - name: local.properties oluştur
@@ -63,18 +64,12 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-    # Hata olsa bile devam et (APK üretildiyse bulup yükleyeceğiz)
     - name: APK derle
-      run: flutter build apk --release || true
+      run: flutter build apk --release
 
-    # Sistemdeki TÜM APK dosyalarını bul
-    - name: APK Dosyalarını Bul
-      run: find . -name "*.apk"
-
-    # Bulunan APK'ları yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: "**/*.apk"
+        path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
