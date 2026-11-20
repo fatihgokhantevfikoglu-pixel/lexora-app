@@ -31,20 +31,26 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _load() async {
-    final s = await _db.getSummaryStats();
-    final tw = await _db.getTopWrong();
-    final dl = await _db.getDailyActivity();
-    final rt = await _db.getRootStats();
-    if (!mounted) return;
-    setState(() {
-      _summary = s;
-      _topWrong = tw;
-      _daily = dl;
-      _roots = rt;
-      _loading = false;
-    });
+    try {
+      final s = await _db.getSummaryStats();
+      final tw = await _db.getTopWrong();
+      final dl = await _db.getDailyActivity();
+      final rt = await _db.getRootStats();
+      if (!mounted) return;
+      setState(() {
+        _summary = s;
+        _topWrong = tw;
+        _daily = dl;
+        _roots = rt;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint("İstatistik yükleme hatası: $e");
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     if (_loading) {
