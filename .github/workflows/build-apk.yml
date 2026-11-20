@@ -29,15 +29,6 @@ jobs:
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # EKSİK OLAN TÜM ANDROID DOSYALARINI FLUTTER'A OLUŞTURT
-    - name: Eksik Android dosyalarını oluştur
-      run: |
-        flutter create --platforms=android --org com.lexora . 
-        # Bizim özel Manifest dosyamızı geri koy
-        if [ -f "android_manifest_backup.xml" ]; then
-          cp android_manifest_backup.xml android/app/src/main/AndroidManifest.xml
-        fi
-
     - name: APK derle
       run: flutter build apk --release
 
