@@ -32,18 +32,24 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KRİTİK EKLEME: Eklentilerin Android'e kaydedilmesini zorla!
-    - name: Eklentileri zorla kaydet
+    # KRİTİK MÜDAHALE: Eklentiyi Android'e zorla kaydet
+    - name: sqflite eklentisini zorla kaydet
       run: |
-        echo "Eklentileri Android tarafına kaydediyorum..."
-        # Flutter'ın eklentileri kendi oluşturduğu dosyaya yazmasını sağla
-        flutter pub get
-        flutter build apk --debug || true
-        # Ana derleme öncesi eklenti kayıt dosyasını kontrol et
-        if [ -f "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" ]; then
-          echo "Eklenti kaydı bulundu!"
+        # Flutter'ın eklenti kayıt dosyasına sqflite'ı manuel olarak ekle
+        REGISTRANT="android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java"
+        if [ -f "$REGISTRANT" ]; then
+          sed -i 's/registerWith(flutterEngine);/registerWith(flutterEngine);\n    flutterEngine.getPlugins().add(new com.tekartik.sqflite.SqflitePlugin());/' "$REGISTRANT"
+          echo "sqflite başarıyla kaydedildi!"
         else
-          echo "Eklenti kaydı BULUNAMADI! (Bu dosya Flutter tarafından derleme anında oluşturulur)"
+          echo "GeneratedPluginRegistrant bulunamadı, oluşturuluyor..."
+          mkdir -p android/app/src/main/java/io/flutter/plugins
+          echo "package io.flutter.plugins;" > "$REGISTRANT"
+          echo "import io.flutter.embedding.engine.FlutterEngine;" >> "$REGISTRANT"
+          echo "public class GeneratedPluginRegistrant {" >> "$REGISTRANT"
+          echo "  public static void registerWith(FlutterEngine flutterEngine) {" >> "$REGISTRANT"
+          echo "    flutterEngine.getPlugins().add(new com.tekartik.sqflite.SqflitePlugin());" >> "$REGISTRANT"
+          echo "  }" >> "$REGISTRANT"
+          echo "}" >> "$REGISTRANT"
         fi
 
     - name: NDK sürümünü güncelle
@@ -64,15 +70,14 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-        # Hata olsa bile devam et ve APK'yı sistemde ara
+    # APK derle (Hata verse bile devam et)
     - name: APK derle
       run: flutter build apk --release || true
 
-    # APK'nın nereye kaydedildiğini bul
+    # APK'yı bul ve yükle
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
 
-    # Bulunan TÜM APK'ları (doğru yolda olmasa bile) yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
