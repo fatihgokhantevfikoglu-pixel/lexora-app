@@ -26,44 +26,26 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. Android projesini oluştur
-    - name: Android projesini oluştur
-      run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
-
-    # 2. Flutter'ın eski önbelleklerini temizle
+    # 1. Temizlik
     - name: Flutter Clean
       run: flutter clean
 
-    # 3. Paketleri indir (Eklentilerin (sqflite) Android tarafına işlenmesini sağlar)
+    # 2. Paketleri indir (sqflite'ın Android tarafına işlenmesini sağlar)
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # 4. NDK Ayarı
+    # 3. NDK Ayarı (Gerekli)
     - name: NDK sürümünü güncelle
       run: |
-        if [ -f android/app/build.gradle.kts ]; then
-          sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
-        fi
-        if [ -f android/app/build.gradle ]; then
-          sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
-        fi
+        # Android klasörü yoksa oluştur (build apk zaten oluşturacak ama biz önceden müdahale edelim)
+        mkdir -p android/app
+        # Not: flutter build apk komutu android klasörünü kendisi oluşturacak, bu yüzden burada bekleyeceğiz.
 
-    # 5. local.properties
-    - name: local.properties oluştur
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-        echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
-
-    # 6. İnternet İzni
-    - name: İnternet iznini ekle
-      run: |
-        sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
-
-    # 7. APK Derle (Eğer dosya yolunu bulamazsa hata vermemesi için)
+    # 4. APK Derle (Android klasörünü ve eklentileri kendisi oluşturur)
     - name: APK derle
       run: flutter build apk --release || true
 
-    # 8. APK'yı Bul ve Yükle
+    # 5. APK'yı Bul ve Yükle
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
 
