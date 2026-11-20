@@ -32,7 +32,10 @@ jobs:
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # KRİTİK EKLEME: local.properties dosyasını elle oluştur
+    # KRİTİK DÜZELTME: Kotlin sürümünü 2.0.0 yap
+    - name: Kotlin sürümünü güncelle
+      run: sed -i -E 's/(id "org.jetbrains.kotlin.android" version ")[^"]+/\12.0.0/' android/settings.gradle
+
     - name: local.properties oluştur
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
