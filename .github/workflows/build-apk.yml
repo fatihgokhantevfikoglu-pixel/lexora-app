@@ -26,24 +26,25 @@ jobs:
         channel: 'stable'
         cache: true
 
+    # 1. Android projesini oluştur
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
+    # 2. Temizlik ve Paketleri Yükleme (Eklentilerin kaydedilmesi için kritik)
     - name: Flutter Clean
       run: flutter clean
 
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    - name: Ayarları yap
+    # 3. NDK ve local.properties ayarları
+    - name: NDK sürümünü güncelle
       run: |
         if [ -f android/app/build.gradle.kts ]; then
           sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle.kts
         fi
         if [ -f android/app/build.gradle ]; then
           sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle
         fi
 
     - name: local.properties oluştur
@@ -55,15 +56,26 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-    # "|| true" sayesinde Flutter APK'yı bulamasa bile işlem durmayacak
+    # 4. Release modunda küçültmeyi kapat (Eklentilerin silinmesini engeller)
+    - name: R8/ProGuard'ı devre dışı bırak
+      run: |
+        if [ -f android/app/build.gradle.kts ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
+        fi
+        if [ -f android/app/build.gradle ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
+        fi
+
+    # 5. APK Derle
     - name: APK derle
       run: flutter build apk --release || true
 
-    # Sunucudaki tüm .apk dosyalarını bul
+    # 6. APK'yı Bul ve Yükle
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
 
-    # Bulunan tüm .apk dosyalarını yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
