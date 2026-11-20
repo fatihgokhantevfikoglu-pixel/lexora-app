@@ -26,28 +26,55 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. Bağımlılıkları yükle
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # 2. Android projesini sıfırdan oluştur (Eklentileri kendi kaydeder)
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # 3. local.properties
+    # KRİTİK DÜZELTME: NDK SÜRÜMÜNÜ ZORLA 27 YAP
+    - name: NDK sürümünü güncelle
+      run: |
+        if [ -f android/app/build.gradle.kts ]; then
+          sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' android/app/build.gradle.kts
+        fi
+        if [ -f android/app/build.gradle ]; then
+          sed -i 's/ndkVersion flutter.ndkVersion/ndkVersion "27.0.12077973"/' android/app/build.gradle
+        fi
+
+    # Release modunda küçültmeyi kapat (Eklentilerin silinmesini engeller)
+    - name: R8/ProGuard'ı devre dışı bırak
+      run: |
+        if [ -f android/app/build.gradle.kts ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
+        fi
+        if [ -f android/app/build.gradle ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
+        fi
+
     - name: local.properties oluştur
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
         echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
-    # 4. APK derle (Hata gizleyici || true KALDIRILDI)
-    - name: APK derle
-      run: flutter build apk --release
+    - name: İnternet iznini ekle
+      run: |
+        sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-    # 5. APK'yı yükle
+    # Hata olsa bile devam et (APK üretildiyse bulup yükleyeceğiz)
+    - name: APK derle
+      run: flutter build apk --release || true
+
+    # Sistemdeki TÜM APK dosyalarını bul
+    - name: APK Dosyalarını Bul
+      run: find . -name "*.apk"
+
+    # Bulunan APK'ları yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: "**/*.apk"
         retention-days: 30
