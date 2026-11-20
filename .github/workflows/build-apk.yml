@@ -26,12 +26,15 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Bağımlılıkları yükle
-      run: flutter pub get
-
+    # 1. ÖNCE ANDROID PROJESİNİ OLUŞTUR
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
+    # 2. SONRA PAKETLERİ YÜKLE (Böylece sqflite Android'e kaydolur)
+    - name: Bağımlılıkları yükle
+      run: flutter pub get
+
+    # 3. NDK AYARI
     - name: NDK sürümünü güncelle
       run: |
         if [ -f android/app/build.gradle.kts ]; then
@@ -50,15 +53,12 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
-    # HATA VERSE BİLE DEVAM ET (Çünkü Gradle arka planda başarıyla derledi)
     - name: APK derle
       run: flutter build apk --release || true
 
-    # SİSTEMDEKİ TÜM APK DOSYALARINI BUL
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
 
-    # BULUNAN TÜM APK'LARI YÜKLE
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
