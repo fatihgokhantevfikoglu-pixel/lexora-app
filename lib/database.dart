@@ -8,10 +8,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
   DatabaseHelper._();
   Database? _db;
+  Future<Database>? _dbFuture; // YENİ: Eşzamanlı istekleri engeller
   final _api = ApiService();
 
   Future<Database> get db async {
-    _db ??= await _open();
+    if (_db != null) return _db!;
+    _dbFuture ??= _open();
+    _db = await _dbFuture;
     return _db!;
   }
 
@@ -57,9 +60,11 @@ class DatabaseHelper {
             reviewed_at TEXT NOT NULL
           )
         ''');
+               final batch = db.batch();
         for (final w in seedWords) {
-          await db.insert('words', w.toMap());
+          batch.insert('words', w.toMap());
         }
+        await batch.commit(noResult: true);
       },
     );
   }
