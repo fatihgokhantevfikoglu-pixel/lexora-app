@@ -1,0 +1,53 @@
+name: LEXORA APK Derle
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Kodu çek
+      uses: actions/checkout@v4
+
+    - name: Java 17 kur
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Flutter kur
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0'
+        channel: 'stable'
+        cache: true
+
+    - name: Flutter projesini başlat (Android dosyaları eksikse)
+      run: |
+        if [ ! -f "android/build.gradle" ] && [ ! -f "android/build.gradle.kts" ]; then
+          echo "Android klasörü tamamlanıyor..."
+          flutter create --platforms=android --org com.lexora --project-name lexora . || true
+          if [ -f "android_manifest_backup.xml" ]; then
+            cp android_manifest_backup.xml android/app/src/main/AndroidManifest.xml
+          fi
+        fi
+
+    - name: Bağımlılıkları yükle
+      run: flutter pub get
+
+    - name: Kodu analiz et
+      run: flutter analyze || true
+
+    - name: APK derle
+      run: flutter build apk --release
+
+    - name: APK'yı yükle
+      uses: actions/upload-artifact@v4
+      with:
+        name: lexora-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
