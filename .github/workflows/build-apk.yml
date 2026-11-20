@@ -26,18 +26,27 @@ jobs:
         channel: 'stable'
         cache: true
 
-    # 1. Android projesini oluştur
     - name: Android projesini oluştur
       run: flutter create --platforms=android --org com.lexora --project-name lexora_app .
 
-    # 2. EKLENTİLERİN ANDROID'E KAYDOLMASI İÇİN ÖNCE TEMİZLE, SONRA PUB GET YAP
     - name: Flutter Clean
       run: flutter clean
 
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    # 3. NDK AYARI
+    # YENİ: RELEASE MODUNDA EKLENTİLERİN SİLİNMESİNİ ENGELLE
+    - name: R8/ProGuard'ı devre dışı bırak
+      run: |
+        if [ -f android/app/build.gradle.kts ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle.kts
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle.kts
+        fi
+        if [ -f android/app/build.gradle ]; then
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
+        fi
+
     - name: NDK sürümünü güncelle
       run: |
         if [ -f android/app/build.gradle.kts ]; then
