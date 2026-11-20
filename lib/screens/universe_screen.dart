@@ -29,19 +29,25 @@ class _UniverseScreenState extends State<UniverseScreen> {
   }
 
   Future<void> _load() async {
-    final all = await _db.getAllWords();
-    final m = <String, List<Word>>{};
-    final rm = <String, String>{};
-    for (final w in all) {
-      m.putIfAbsent(w.family, () => []).add(w);
-      rm[w.family] = w.rootMeaning;
+    try {
+      final all = await _db.getAllWords();
+      final m = <String, List<Word>>{};
+      final rm = <String, String>{};
+      for (final w in all) {
+        m.putIfAbsent(w.family, () => []).add(w);
+        rm[w.family] = w.rootMeaning;
+      }
+      if (!mounted) return;
+      setState(() {
+        _families = m;
+        _roots = rm;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint("Evren yükleme hatası: $e");
+      if (!mounted) return;
+      setState(() => _loading = false);
     }
-    if (!mounted) return;
-    setState(() {
-      _families = m;
-      _roots = rm;
-      _loading = false;
-    });
   }
 
   Color _colorFor(Word w) {
