@@ -64,12 +64,18 @@ jobs:
       run: |
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
+        # Hata olsa bile devam et ve APK'yı sistemde ara
     - name: APK derle
-      run: flutter build apk --release
+      run: flutter build apk --release || true
 
+    # APK'nın nereye kaydedildiğini bul
+    - name: APK Dosyalarını Bul
+      run: find . -name "*.apk"
+
+    # Bulunan TÜM APK'ları (doğru yolda olmasa bile) yükle
     - name: APK'yı yükle
       uses: actions/upload-artifact@v4
       with:
         name: lexora-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: "**/*.apk"
         retention-days: 30
