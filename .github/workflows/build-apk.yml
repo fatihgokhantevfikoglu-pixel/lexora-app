@@ -26,21 +26,17 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Flutter projesini başlat (Android dosyaları eksikse)
-      run: |
-        if [ ! -f "android/build.gradle" ] && [ ! -f "android/build.gradle.kts" ]; then
-          echo "Android klasörü tamamlanıyor..."
-          flutter create --platforms=android --org com.lexora --project-name lexora . || true
-          if [ -f "android_manifest_backup.xml" ]; then
-            cp android_manifest_backup.xml android/app/src/main/AndroidManifest.xml
-          fi
-        fi
-
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
-    - name: Kodu analiz et
-      run: flutter analyze || true
+    # EKSİK OLAN TÜM ANDROID DOSYALARINI FLUTTER'A OLUŞTURT
+    - name: Eksik Android dosyalarını oluştur
+      run: |
+        flutter create --platforms=android --org com.lexora . 
+        # Bizim özel Manifest dosyamızı geri koy
+        if [ -f "android_manifest_backup.xml" ]; then
+          cp android_manifest_backup.xml android/app/src/main/AndroidManifest.xml
+        fi
 
     - name: APK derle
       run: flutter build apk --release
