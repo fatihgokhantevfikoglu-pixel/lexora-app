@@ -8,72 +8,102 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
   DatabaseHelper._();
   Database? _db;
-  Future<Database>? _dbFuture;
   final _api = ApiService();
 
   Future<Database> get db async {
     if (_db != null) return _db!;
-    _dbFuture ??= _open();
-    _db = await _dbFuture;
+    _db = await _open();
     return _db!;
   }
 
   Future<void> init() async {
-    await db;
+    final d = await db;
+    // Tablolar oluştuktan sonra içini kontrol et
+    final count = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM words')) ?? 0;
+    if (count == 0) {
+      // Eğer boşsa, kelimeleri TEK TEK ekle (Batch kullanmıyoruz, çökmesin diye)
+      for (final w in seedWords) {
+        await d.insert('words', w.toMap(), conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+    }
   }
 
   Future<Database> _open() async {
     final path = join(await getDatabasesPath(), 'lexora.db');
     return openDatabase(
       path,
-      version: 2, // Sürüm 2 yapıldı: Eski bozuk veritabanı silinecek
-      onCreate: (db, v) async => await _createTables(db),
+      version: 4, // Sürümü 4 yaptık: Telefondaki eski bozuk veritabanını zorla siler
+      onCreate: (db, v) async {
+        await db.execute('''
+          CREATE TABLE words (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            english TEXT UNIQUE NOT NULL,
+            turkish TEXT NOT NULL,
+            pos TEXT NOT NULL,
+            root TEXT NOT NULL,
+            root_meaning TEXT NOT NULL,
+            morphology TEXT NOT NULL,
+            family TEXT NOT NULL,
+            correct_count INTEGER DEFAULT 0,
+            wrong_count INTEGER DEFAULT 0,
+            consecutive_correct INTEGER DEFAULT 0,
+            is_mastered INTEGER DEFAULT 0,
+            last_reviewed TEXT,
+            next_review TEXT,
+            ease_factor REAL DEFAULT 2.5,
+            interval_days INTEGER DEFAULT 0,
+            repetitions INTEGER DEFAULT 0,
+            times_shown INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE review_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word_id INTEGER NOT NULL,
+            was_correct INTEGER NOT NULL,
+            quality INTEGER NOT NULL,
+            response_time_ms INTEGER NOT NULL,
+            reviewed_at TEXT NOT NULL
+          )
+        ''');
+      },
       onUpgrade: (db, oldV, newV) async {
         await db.execute('DROP TABLE IF EXISTS words');
         await db.execute('DROP TABLE IF EXISTS review_log');
-        await _createTables(db);
+        await db.execute('''
+          CREATE TABLE words (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            english TEXT UNIQUE NOT NULL,
+            turkish TEXT NOT NULL,
+            pos TEXT NOT NULL,
+            root TEXT NOT NULL,
+            root_meaning TEXT NOT NULL,
+            morphology TEXT NOT NULL,
+            family TEXT NOT NULL,
+            correct_count INTEGER DEFAULT 0,
+            wrong_count INTEGER DEFAULT 0,
+            consecutive_correct INTEGER DEFAULT 0,
+            is_mastered INTEGER DEFAULT 0,
+            last_reviewed TEXT,
+            next_review TEXT,
+            ease_factor REAL DEFAULT 2.5,
+            interval_days INTEGER DEFAULT 0,
+            repetitions INTEGER DEFAULT 0,
+            times_shown INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE review_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word_id INTEGER NOT NULL,
+            was_correct INTEGER NOT NULL,
+            quality INTEGER NOT NULL,
+            response_time_ms INTEGER NOT NULL,
+            reviewed_at TEXT NOT NULL
+          )
+        ''');
       },
     );
-  }
-
-  Future<void> _createTables(Database db) async {
-    await db.execute('''
-      CREATE TABLE words (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        english TEXT UNIQUE NOT NULL,
-        turkish TEXT NOT NULL,
-        pos TEXT NOT NULL,
-        root TEXT NOT NULL,
-        root_meaning TEXT NOT NULL,
-        morphology TEXT NOT NULL,
-        family TEXT NOT NULL,
-        correct_count INTEGER DEFAULT 0,
-        wrong_count INTEGER DEFAULT 0,
-        consecutive_correct INTEGER DEFAULT 0,
-        is_mastered INTEGER DEFAULT 0,
-        last_reviewed TEXT,
-        next_review TEXT,
-        ease_factor REAL DEFAULT 2.5,
-        interval_days INTEGER DEFAULT 0,
-        repetitions INTEGER DEFAULT 0,
-        times_shown INTEGER DEFAULT 0
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE review_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        word_id INTEGER NOT NULL,
-        was_correct INTEGER NOT NULL,
-        quality INTEGER NOT NULL,
-        response_time_ms INTEGER NOT NULL,
-        reviewed_at TEXT NOT NULL
-      )
-    ''');
-    final batch = db.batch();
-    for (final w in seedWords) {
-      batch.insert('words', w.toMap());
-    }
-    await batch.commit(noResult: true);
   }
 
   Future<List<Word>> getActiveWords() async {
@@ -98,16 +128,12 @@ class DatabaseHelper {
       final d = await db;
       final existingRows = await d.query('words', columns: ['english']);
       final existing = existingRows.map((r) => r['english'] as String).toSet();
-
       final seeds = seedWords.map((w) => w.english).toList();
       final randomSeed = (seeds..shuffle()).first;
       final related = await _api.fetchRelatedWords(randomSeed, limit: count + 5);
-
       final candidates = related.where((w) => !existing.contains(w)).take(count).toList();
       if (candidates.isEmpty) return 0;
-
       final enriched = await _api.enrichAndCreateWords(candidates);
-
       int added = 0;
       for (final w in enriched) {
         try {
@@ -139,14 +165,7 @@ class DatabaseHelper {
     final correct = Sqflite.firstIntValue(await d.rawQuery('SELECT COALESCE(SUM(correct_count),0) FROM words')) ?? 0;
     final wrong = Sqflite.firstIntValue(await d.rawQuery('SELECT COALESCE(SUM(wrong_count),0) FROM words')) ?? 0;
     final due = Sqflite.firstIntValue(await d.rawQuery('SELECT COUNT(*) FROM words WHERE is_mastered = 0 AND (next_review IS NULL OR next_review <= ?)', [DateTime.now().toIso8601String()])) ?? 0;
-    return {
-      'total': total,
-      'mastered': mastered,
-      'correct': correct,
-      'wrong': wrong,
-      'due': due,
-      'learning': total - mastered,
-    };
+    return {'total': total, 'mastered': mastered, 'correct': correct, 'wrong': wrong, 'due': due, 'learning': total - mastered};
   }
 
   Future<List<Map<String, dynamic>>> getRootStats() async {
@@ -176,8 +195,8 @@ class DatabaseHelper {
     final d = await db;
     await d.delete('review_log');
     await d.delete('words');
-    final batch = d.batch();
-    for (final w in seedWords) { batch.insert('words', w.toMap()); }
-    await batch.commit(noResult: true);
+    for (final w in seedWords) { 
+      await d.insert('words', w.toMap(), conflictAlgorithm: ConflictAlgorithm.ignore); 
+    }
   }
 }
