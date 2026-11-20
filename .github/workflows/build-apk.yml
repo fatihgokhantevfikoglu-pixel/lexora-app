@@ -61,7 +61,7 @@ jobs:
         sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
 
     - name: APK derle
-      run: flutter build apk --release || true
+      run: flutter build apk --release 
 
     - name: APK Dosyalarını Bul
       run: find . -name "*.apk"
