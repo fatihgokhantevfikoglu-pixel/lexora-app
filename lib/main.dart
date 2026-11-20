@@ -9,7 +9,7 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Veritabanını arka planda başlat, uygulamanın açılmasını engelleme
+  // Veritabanını arka planda başlat, uygulamanın açılmasını engelleme!
   DatabaseHelper.instance.init().catchError((e) {
     debugPrint("Veritabanı başlatma hatası: $e");
   });
