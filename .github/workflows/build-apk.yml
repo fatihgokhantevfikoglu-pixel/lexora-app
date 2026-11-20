@@ -29,6 +29,15 @@ jobs:
     - name: Bağımlılıkları yükle
       run: flutter pub get
 
+    # ANDROID KLASÖRÜNÜ SIFIRDAN VE EKSİKSİZ OLUŞTUR
+    - name: Android projesini oluştur
+      run: flutter create --platforms=android --org com.lexora .
+
+    # İNTERNET İZNİNİ EKLE (Uygulama internete bağlanacaksa şart)
+    - name: İnternet iznini ekle
+      run: |
+        sed -i 's/<application/\<uses-permission android:name="android.permission.INTERNET"\/\>\n    <application/' android/app/src/main/AndroidManifest.xml
+
     - name: APK derle
       run: flutter build apk --release
 
